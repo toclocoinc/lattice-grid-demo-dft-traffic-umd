@@ -1,0 +1,33 @@
+{
+  "fetchedAt": "2026-09-20T06:24:22.386Z",
+  "fetchedAtMs": 1789885462390,
+  "seconds": 1.9,
+  "rows": 89168,
+  "years": [
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "source": "Department for Transport road traffic statistics (AADF)",
+  "sourceUrl": "https://roadtraffic.dft.gov.uk/downloads",
+  "dataUrl": "https://storage.googleapis.com/dft-statistics/road-traffic/downloads/data-gov-uk/dft_traffic_counts_aadf.zip",
+  "licence": "Open Government Licence v3.0",
+  "columns": [
+    "id",
+    "countPointId",
+    "year",
+    "region",
+    "authority",
+    "roadName",
+    "roadCategory",
+    "roadType",
+    "pedalCycles",
+    "motorcycles",
+    "carsAndTaxis",
+    "busesAndCoaches",
+    "lgvs",
+    "hgvs",
+    "allMotorVehicles"
+  ]
+}
