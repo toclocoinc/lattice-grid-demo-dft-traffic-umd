@@ -282,7 +282,9 @@
         el(
           'p',
           'notice',
-          'The Department for Transport traffic counts could not be reached, so this is the saved copy. Reloading the page will try again.',
+          'The traffic-count download does not allow browser requests \u2014 it sends no cross-origin header \u2014 so a ' +
+            'page like this one can never read it directly. What you are looking at is the saved copy, refreshed by the ' +
+            'snapshot tool in this repository. Every count is the Department\u2019s own; only the fetch is done ahead of time.',
         ),
       );
     }

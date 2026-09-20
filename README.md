@@ -83,7 +83,7 @@ That prints an address. Open it.
 
 | Address | What you get |
 | --- | --- |
-| `/` | live, reading the DfT traffic counts and polling for changes |
+| `/` | tries the DfT traffic counts, then shows the saved copy (see below) |
 | `/?source=snapshot` | the saved copy in `data/snapshot`, no download needed |
 
 The live path attempts to read the bulk CSV from the DfT's storage bucket. That

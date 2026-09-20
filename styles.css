@@ -64,8 +64,13 @@ body {
   align-items: center;
   color: var(--ink-soft);
   display: flex;
+  flex-wrap: wrap;
   font-size: 12px;
   gap: 10px;
+  /* The provenance line carries a whole sentence about where the data came
+     from and when. Left unbreakable it sets the width of the masthead, and on
+     a phone that one line pushed the whole page sideways. It wraps instead. */
+  min-width: 0;
 }
 
 .pill {
@@ -97,7 +102,8 @@ body {
 }
 
 .freshness {
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .freshness.failed {
@@ -107,14 +113,12 @@ body {
 
 /* The tiles */
 
+/* A row of tiles, each of which draws its own card. The strip itself is
+   layout only. */
 .kpi-strip {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
   display: grid;
   gap: 10px;
   grid-template-columns: minmax(0, 5fr) minmax(240px, 2fr);
-  padding: 9px 11px;
 }
 
 .kpi-panel {
@@ -123,6 +127,7 @@ body {
 
 /* A tile for a reading that is words rather than a number. */
 .kpi-named {
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
   display: flex;
@@ -336,4 +341,57 @@ body {
   color: #6b4d12;
   margin: 8px 0 0;
   padding: 6px 10px;
+}
+
+
+/* ------------------------------------------------------------------ */
+/* One column on a phone                                               */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Below this width the page stops being a dashboard laid out across and
+ * becomes a single column read down. Every multi-column strip folds to one
+ * track, the charts get a height of their own instead of sharing a row's,
+ * and nothing is allowed to set a width the screen has to scroll to reach.
+ *
+ * The KPI panel sizes its own tracks from `--lat-kpi-tile-min`, which
+ * `columns: 4` sets as an inline style on the panel; `!important` is what
+ * lets a stylesheet have the last word over that inline value, so the four
+ * columns asked for on a desktop become one here rather than four tiles too
+ * narrow to read.
+ */
+@media (max-width: 640px) {
+  #app {
+    padding: 12px 12px 10px;
+  }
+
+  .head h1 {
+    font-size: 19px;
+  }
+
+  .kpi-strip,
+  .chart-wrap,
+  .derived-wrap {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .chart-wrap {
+    height: auto;
+  }
+
+  .chart-box {
+    height: 240px;
+  }
+
+  .derived-box {
+    height: 280px;
+  }
+
+  .tabs-host {
+    flex: 0 0 460px;
+  }
+
+  .kpi-panel.lat-kpi {
+    --lat-kpi-tile-min: 100% !important;
+  }
 }

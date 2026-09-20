@@ -330,6 +330,43 @@ try {
     check(c.marks > 2, `saved copy: chart ${c.i} drew marks`, `${c.marks} marks`);
     check(c.withValue > 0, `saved copy: chart ${c.i} plotted values rather than empty axes`, `${c.withValue} of ${c.points} points carry a measure`);
   }
+  /* ------------------------------------------------------------------ */
+  /* The main grid, specifically.                                        */
+  /* ------------------------------------------------------------------ */
+
+  /*
+   * `snap.painted` counts `[role="row"]` across every `.lattice` on the page,
+   * so any one grid with rows satisfies it. That is a different question from
+   * "did the grid this page is built around draw anything", which is the one
+   * a reader actually cares about, and which the summary grids beside it can
+   * answer for it. So this asks about that one grid, and counts only *data*
+   * rows -- the sticky totals row and the header row are `.lat-row` too, and
+   * carry no `data-index`.
+   */
+  const mainGrid = await evaluate(`(() => {
+    const host = document.querySelector('.primary-host') || document.querySelector('.tabs-host');
+    const root = host && host.querySelector('.lattice');
+    const viewport = root && root.querySelector('.lat-body-viewport');
+    if (!root) return { found: false };
+    return {
+      found: true,
+      dataRows: viewport ? viewport.querySelectorAll('.lat-row[data-index]').length : 0,
+      anyRows: viewport ? viewport.querySelectorAll('.lat-row').length : 0,
+      bodyCells: viewport ? viewport.querySelectorAll('[role="gridcell"]').length : 0,
+      columnHeaders: root.querySelectorAll('[role="columnheader"]').length,
+      viewportHeight: viewport ? Math.round(viewport.getBoundingClientRect().height) : 0,
+    };
+  })()`);
+  console.log(`  main grid: ${mainGrid.dataRows} data rows, ${mainGrid.bodyCells} body cells, `
+    + `${mainGrid.columnHeaders} column headers, body ${mainGrid.viewportHeight}px tall`);
+
+  check(mainGrid.found, 'saved copy: the main grid exists');
+  check(mainGrid.dataRows > 0, 'saved copy: the main grid painted at least one data row',
+    `${mainGrid.dataRows} data rows in a body ${mainGrid.viewportHeight}px tall`);
+  check(mainGrid.bodyCells > 0, 'saved copy: the main grid painted cells', `${mainGrid.bodyCells}`);
+  check(mainGrid.columnHeaders > 0, 'saved copy: the main grid drew a column header row',
+    `${mainGrid.columnHeaders}`);
+
   noErrors('saved copy');
   await shoot('01-counts');
 
@@ -440,6 +477,54 @@ try {
   await evaluate('window.__dftTrafficDemo.motorwayButton.click()');
   await sleep(500);
   await shoot('03-filtered');
+  /* ------------------------------------------------------------------ */
+  /* On a phone.                                                         */
+  /* ------------------------------------------------------------------ */
+
+  /*
+   * A dashboard laid out across can leave one element wider than the screen,
+   * and the whole page then scrolls sideways -- which on a phone is the first
+   * thing a reader meets. Loaded narrow, nothing may stick out, and the grid
+   * this page is built around must still draw rows.
+   */
+  await call('Emulation.setDeviceMetricsOverride', { width: 400, height: 900, deviceScaleFactor: 1, mobile: true });
+  await open(`${origin}/index.html?source=snapshot`, 'saved copy, 400px wide');
+
+  const narrow = await evaluate(`(() => {
+    const de = document.documentElement;
+    const host = document.querySelector('.primary-host') || document.querySelector('.tabs-host');
+    const root = host && host.querySelector('.lattice');
+    const viewport = root && root.querySelector('.lat-body-viewport');
+    const widest = [];
+    const clipped = (e) => getComputedStyle(e).overflowX !== 'visible';
+    const walk = (e) => {
+      for (const child of e.children) {
+        const box = child.getBoundingClientRect();
+        if (box.width === 0 && box.height === 0) continue;
+        if (box.right > de.clientWidth + 1) {
+          widest.push(String(child.className || child.tagName).slice(0, 40) + ' @' + Math.round(box.right));
+        }
+        if (!clipped(child)) walk(child);
+      }
+    };
+    walk(document.body);
+    return {
+      clientWidth: de.clientWidth,
+      scrollWidth: de.scrollWidth,
+      dataRows: viewport ? viewport.querySelectorAll('.lat-row[data-index]').length : 0,
+      sticking: widest.slice(0, 5),
+    };
+  })()`);
+  console.log(`  at 400px: scrollWidth ${narrow.scrollWidth} vs clientWidth ${narrow.clientWidth}, `
+    + `${narrow.dataRows} data rows in the main grid`);
+  if (narrow.sticking.length) console.log(`  sticking out: ${narrow.sticking.join(', ')}`);
+
+  check(narrow.scrollWidth <= narrow.clientWidth, 'at 400px: the page does not scroll sideways',
+    `scrollWidth ${narrow.scrollWidth} > clientWidth ${narrow.clientWidth}; ${narrow.sticking.join(', ')}`);
+  check(narrow.dataRows > 0, 'at 400px: the main grid still paints data rows', `${narrow.dataRows}`);
+
+  await call('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+
   noErrors('saved copy, after the checks');
 
   /* =================================================================== */
@@ -470,7 +555,12 @@ try {
   check(fallback.fellBack, 'fallback: the page recorded that it fell back to the saved copy');
   check(fallback.mode === 'live', 'fallback: the page ran in the live default, not snapshot mode', `mode ${fallback.mode}`);
   check(fallback.badge === 'Saved copy', 'fallback: the badge reads "Saved copy"', `"${fallback.badge}"`);
-  check(!!fallback.notice && /could not be reached/i.test(fallback.notice), 'fallback: the page says the download was unreachable', fallback.notice);
+  check(!!fallback.notice && /does not allow browser requests/i.test(fallback.notice),
+    'fallback: the page says the download cannot be read by a browser', fallback.notice);
+  check(!!fallback.notice && /saved copy/i.test(fallback.notice),
+    'fallback: the page says what is on screen instead', fallback.notice);
+  check(!!fallback.notice && !/will try again/i.test(fallback.notice),
+    'fallback: the page does not invite a reload that cannot succeed', fallback.notice);
   check(!fallback.polling, 'fallback: no poll is started against a download that could not be reached');
   check(pageErrors.length === 0, 'fallback: no page errors', pageErrors.slice(0, 3).join(' | '));
   await shoot('04-fallback');
@@ -500,7 +590,7 @@ try {
     check(live.charts === 3, 'live: all three charts were built', `${live.charts}`);
     check(live.watermark === false, 'live: no watermark on localhost');
     check(
-      live.fellBack === false || (live.notice && /could not be reached/i.test(live.notice)),
+      live.fellBack === false || (live.notice && /does not allow browser requests/i.test(live.notice)),
       'live: either the download was read or the fallback was explained',
       live.fellBack ? live.notice : 'downloaded',
     );
