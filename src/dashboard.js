@@ -220,7 +220,6 @@
       find: true,
       grandTotalRow: 'bottom',
       groupDefaultExpanded: 0,
-      toolPanel: { side: 'right', panels: ['filters', 'columns', 'formatting'] },
       selection: 'multiple',
       highlightOnChange: { colour: '#ffe8a3', duration: 2500 },
       title,
